@@ -1,31 +1,29 @@
 import os
 from telethon import TelegramClient, events
 from telethon.tl.functions.users import GetFullUserRequest
-from dotenv import load_dotenv
 
-# 🔹 Load API credentials securely from .env file
-load_dotenv()
+# ✅ Set API credentials
+API_ID = 21552265  # Replace with your API_ID
+API_HASH = "1c971ae7e62cc416ca977e040e700d09"  # Replace with your API_HASH
 
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+# ✅ Create a UserBot session
+client = TelegramClient("userbot_session", API_ID, API_HASH)
 
-# 🔹 Initialize the Telethon Bot Client
-client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+# 📌 UserBot Login
+async def main():
+    print("🔹 Logging in... Enter phone number if required.")
+    await client.start()
 
 # 📌 Command: /userinfo <user_id>
 @client.on(events.NewMessage(pattern='/userinfo'))
 async def user_info(event):
     try:
-        # Extract user ID from the command
         args = event.message.text.split(" ")
         if len(args) < 2:
             await event.reply("❌ Please provide a user ID or username. Example: `/userinfo 123456789`")
             return
 
         user_id = args[1]
-
-        # Fetch user details
         user = await client.get_entity(user_id)
         full_user = await client(GetFullUserRequest(user))
 
@@ -33,9 +31,9 @@ async def user_info(event):
         username = f"@{user.username}" if user.username else "No Username"
         first_name = user.first_name or "No First Name"
         last_name = user.last_name or "No Last Name"
-        bio = getattr(full_user, 'about', 'No Bio')  # ✅ FIX: Handle missing bio
+        bio = getattr(full_user.full_user, 'about', 'No Bio')
 
-        # Fetch user groups
+        # ✅ Fetch all groups the user is in
         groups = []
         async for dialog in client.iter_dialogs():
             if dialog.is_group:
@@ -47,15 +45,8 @@ async def user_info(event):
                     continue
 
         group_count = len(groups)
+        group_text = "\n".join([f"🔹 {g}" for g in groups]) if groups else "No Groups Found"
 
-        # Split groups if too long
-        if group_count > 0:
-            group_text = "\n".join([f"🔹 {g}" for g in groups])
-            group_message = f"🏘 **Groups Joined ({group_count}):**\n\n{group_text}"
-        else:
-            group_message = "🏘 **No groups found.**"
-
-        # Format response
         response = f"""
 👤 **User Details**
 ──────────────────
@@ -65,19 +56,16 @@ async def user_info(event):
 📜 Bio: {bio}
 🏘 Groups Joined: {group_count}
 
-{group_message}
+📋 **Group List:**
+{group_text}
 """
 
-        # Split message if too long
-        if len(response) > 4096:
-            for chunk in [response[i:i+4096] for i in range(0, len(response), 4096)]:
-                await event.reply(chunk)
-        else:
-            await event.reply(response)
+        await event.reply(response)
 
     except Exception as e:
         await event.reply(f"❌ Error: {e}")
 
-# 🔹 Run the bot
-print("✅ Bot is running...")
-client.run_until_disconnected()
+# ✅ Start the UserBot
+with client:
+    client.loop.run_until_complete(main())
+    client.run_until_disconnected()
