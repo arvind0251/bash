@@ -1,6 +1,3 @@
 telethon
 asyncio
-pyrogram
-tgcrypto
 python-dotenv
-pip install telethon asyncio
